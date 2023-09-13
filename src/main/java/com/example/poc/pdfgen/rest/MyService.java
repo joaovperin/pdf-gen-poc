@@ -5,14 +5,19 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.io.StringWriter;
 import java.io.Writer;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
+import org.xhtmlrenderer.layout.SharedContext;
+import org.xhtmlrenderer.pdf.ITextRenderer;
 
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
@@ -30,8 +35,28 @@ public class MyService {
     }
 
     public Resource generatePdfResource() throws IOException, TemplateException {
-        // WIP: develop the PDF generation
-        return generateHtmlResource();
+        final var model = repository.getModel();
+        Map<String, Object> data = new HashMap<String, Object>();
+        data.put("myModel", model);
+
+        try (final var htmlOut = new StringWriter()) {
+            freemarkerTemplate.process(data, htmlOut);
+            htmlOut.flush();
+
+            try (final var outputStream = new ByteArrayOutputStream()) {
+                Document document = Jsoup.parse(htmlOut.toString(), "UTF-8");
+                document.outputSettings().syntax(Document.OutputSettings.Syntax.xml);
+
+                final ITextRenderer renderer = new ITextRenderer();
+                final SharedContext sharedContext = renderer.getSharedContext();
+                sharedContext.setPrint(true);
+                sharedContext.setInteractive(false);
+                renderer.setDocumentFromString(document.html());
+                renderer.layout();
+                renderer.createPDF(outputStream);
+                return new ByteArrayResource(outputStream.toByteArray());
+            }
+        }
     }
 
     public Resource generateHtmlResource() throws IOException, TemplateException {

@@ -11,13 +11,12 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class MyRepository {
 
-    public MyModel getModel() {
+    public MyModel getModel(int itemsCount) {
         final var id = generateRandomIntBetween(1, 1000);
-        final var itemsCount = generateRandomIntBetween(100, 1000);
         return getModel(id, itemsCount);
     }
 
-    public MyModel getModel(long id, int itemsCount) {
+    private MyModel getModel(long id, int itemsCount) {
         return generateRandomModel(id, itemsCount);
     }
 
